@@ -1,0 +1,10 @@
+# Compiled Java files
+*.class
+out/
+target/
+
+# Local editor settings
+.vscode/
+
+# Local secrets
+.env
