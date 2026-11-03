@@ -1,0 +1,19 @@
+# Java build outputs
+*.class
+*.log
+hs_err_pid*
+out/
+target/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
+
+# Environment and local secrets
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
