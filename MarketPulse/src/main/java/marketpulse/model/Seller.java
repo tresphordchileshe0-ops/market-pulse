@@ -1,4 +1,4 @@
-package marketplace.model;
+package marketpulse.model;
 
 /**
  * Represents a market trader / shop in Zambia.
