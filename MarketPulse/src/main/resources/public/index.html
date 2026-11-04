@@ -10,14 +10,13 @@
 <body>
 <header>
     <h1>MarketPulse</h1>
-    <p>Record prices, compare sellers, and view price history.</p>
+    <p>Record product prices and compare their changes over time.</p>
 </header>
 
 <main>
     <p id="status-message" role="status" aria-live="polite">
         Connecting to MarketPulse…
     </p>
-
     <button id="refresh-button" type="button">Refresh records</button>
 
     <section>
@@ -38,9 +37,7 @@
             </div>
             <button type="submit">Save product</button>
         </form>
-
         <p id="products-message" role="status" aria-live="polite"></p>
-
         <table>
             <caption>Recorded products</caption>
             <thead>
@@ -48,6 +45,7 @@
                     <th scope="col">Name</th>
                     <th scope="col">Category</th>
                     <th scope="col">Package unit</th>
+                    <th scope="col">Action</th>
                 </tr>
             </thead>
             <tbody id="products-table-body"></tbody>
@@ -67,7 +65,6 @@
             </div>
             <button type="submit">Save seller</button>
         </form>
-
         <table>
             <caption>Recorded sellers</caption>
             <thead>
@@ -82,8 +79,6 @@
 
     <section>
         <h2>Record a price</h2>
-        <p>A new price adds a history entry; it does not erase earlier prices.</p>
-
         <form id="price-form">
             <div>
                 <label for="price-product">Product</label>
@@ -96,65 +91,14 @@
             <div>
                 <label for="price-amount">Price in ZMW</label>
                 <input id="price-amount" name="price" type="number"
-                       min="0.01" step="0.01" required>
+                       min="0" step="0.01" required>
+            </div>
+            <div>
+                <label for="price-date">Recorded date</label>
+                <input id="price-date" name="recordedAt" type="date" required>
             </div>
             <button type="submit">Record price</button>
         </form>
-    </section>
-
-    <section>
-        <h2>Latest recorded prices</h2>
-        <div>
-            <label for="latest-product">Product</label>
-            <select id="latest-product"></select>
-        </div>
-        <p>
-            Sorted from lowest to highest. Dates show when prices were
-            recorded; older observations may no longer reflect current prices.
-        </p>
-
-        <table>
-            <caption>Latest observation per seller for the selected product</caption>
-            <thead>
-                <tr>
-                    <th scope="col">Seller</th>
-                    <th scope="col">ZMW</th>
-                    <th scope="col">Recorded</th>
-                </tr>
-            </thead>
-            <tbody id="latest-body"></tbody>
-        </table>
-    </section>
-
-    <section>
-        <h2>Compare two observations</h2>
-        <p>
-            Select observations for the same product. A positive result
-            means the compared price is higher than the baseline.
-        </p>
-
-        <form id="comparison-form">
-            <div>
-                <label for="baseline-observation">Baseline observation</label>
-                <select id="baseline-observation"
-                        name="baselineId" required></select>
-            </div>
-            <div>
-                <label for="compared-observation">Compared observation</label>
-                <select id="compared-observation"
-                        name="comparedId" required></select>
-            </div>
-            <div>
-                <label for="comparison-type">Comparison method</label>
-                <select id="comparison-type" name="type">
-                    <option value="difference">Monetary difference</option>
-                    <option value="percentage">Percentage change</option>
-                </select>
-            </div>
-            <button type="submit">Compare</button>
-        </form>
-
-        <p id="comparison-result" role="status" aria-live="polite"></p>
     </section>
 
     <section>
@@ -163,29 +107,33 @@
             <label for="history-product">Product</label>
             <select id="history-product"></select>
         </div>
-        <div>
-            <label for="history-seller">Seller</label>
-            <select id="history-seller"></select>
-        </div>
-
         <table>
-            <caption>Observations for the selected product and seller</caption>
+            <caption>Recorded prices for the selected product</caption>
             <thead>
                 <tr>
                     <th scope="col">Recorded</th>
+                    <th scope="col">Seller</th>
                     <th scope="col">ZMW</th>
                 </tr>
             </thead>
             <tbody id="history-body"></tbody>
         </table>
+        <p id="history-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section>
+        <h2>Compare latest prices</h2>
+        <div>
+            <label for="comparison-product">Product</label>
+            <select id="comparison-product"></select>
+        </div>
+        <button id="compare-button" type="button">Compare latest two</button>
+        <p id="comparison-result" role="status" aria-live="polite"></p>
     </section>
 </main>
 
 <footer>
-    <p>
-        Manually recorded prices, not a live market feed.
-        Results cover only records in MarketPulse.
-    </p>
+    <p>MarketPulse displays manually recorded prices in its local data set.</p>
 </footer>
 </body>
 </html>

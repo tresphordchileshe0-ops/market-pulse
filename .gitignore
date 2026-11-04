@@ -4,6 +4,7 @@
 hs_err_pid*
 out/
 target/
+MarketPulse/data/
 
 # IDE and editor files
 .vscode/

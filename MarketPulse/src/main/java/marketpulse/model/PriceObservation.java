@@ -14,26 +14,25 @@ public class PriceObservation extends MarketRecord {
     private final Product product;      // which good
     private final Seller seller;        // who sells it
     private final BigDecimal price;     // amount in ZMW (never double for money)
-    private final LocalDate dateRecorded;
+    private final LocalDate recordedAt;
 
     public PriceObservation(String id,
                            Product product,
                            Seller seller,
                            BigDecimal price,
-                           LocalDate dateRecorded) {
+                           LocalDate recordedAt) {
         super(id);
         this.product = Objects.requireNonNull(product, "Product is required.");
         this.seller  = Objects.requireNonNull(seller,  "Seller is required.");
-        this.price   = requirePositive(price);
-        this.dateRecorded = Objects.requireNonNull(
-                dateRecorded, "Date recorded is required.");
+        this.price   = requireNonNegative(price);
+        this.recordedAt = Objects.requireNonNull(
+                recordedAt, "Recorded date is required.");
     }
 
-    /** Money must be positive; BigDecimal keeps ZMW amounts exact. */
-    private static BigDecimal requirePositive(BigDecimal value) {
-        if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+    private static BigDecimal requireNonNegative(BigDecimal value) {
+        if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(
-                "Price must be greater than zero.");
+                "Price cannot be negative.");
         }
         return value;
     }
@@ -41,7 +40,11 @@ public class PriceObservation extends MarketRecord {
     public Product getProduct()       { return product; }
     public Seller getSeller()         { return seller; }
     public BigDecimal getPrice()       { return price; }
-    public LocalDate getDateRecorded() { return dateRecorded; }
+    public LocalDate getRecordedAt()   { return recordedAt; }
+    public LocalDate getDateRecorded() { return recordedAt; }
+
+    public String getProductId() { return product.getId(); }
+    public String getSellerId() { return seller.getId(); }
 
     /** Convenience for UI / JSON-like output. */
     public String getCurrency() { return "ZMW"; }
@@ -51,6 +54,6 @@ public class PriceObservation extends MarketRecord {
         return "PriceObservation[" + getId()
                 + ", " + product.getName()
                 + " @ " + seller.getName()
-                + ", " + price + " ZMW on " + dateRecorded + "]";
+                + ", " + price + " ZMW on " + recordedAt + "]";
     }
 }

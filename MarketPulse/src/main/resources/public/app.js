@@ -1,15 +1,19 @@
 "use strict";
 
-const productForm = document.getElementById("product-form");
-const productName = document.getElementById("product-name");
-const productCategory = document.getElementById("product-category");
-const productUnit = document.getElementById("product-unit");
-
-const productsBody = document.getElementById("products-table-body");
-const productsMessage = document.getElementById("products-message");
 const statusMessage = document.getElementById("status-message");
-const refreshButton = document.getElementById("refresh-button");
-const saveButton = productForm.querySelector('button[type="submit"]');
+const productsMessage = document.getElementById("products-message");
+const productsBody = document.getElementById("products-table-body");
+const sellersBody = document.getElementById("sellers-body");
+const historyBody = document.getElementById("history-body");
+const historyMessage = document.getElementById("history-message");
+const comparisonResult = document.getElementById("comparison-result");
+const productSelectors = [
+    document.getElementById("price-product"),
+    document.getElementById("history-product"),
+    document.getElementById("comparison-product")
+];
+let products = [];
+let sellers = [];
 
 function showStatus(message) {
     statusMessage.textContent = message;
@@ -17,173 +21,235 @@ function showStatus(message) {
 
 async function request(path, options = {}) {
     const response = await fetch(path, options);
-
     if (!response.ok) {
         let message = `Server returned HTTP ${response.status}.`;
-        const contentType = response.headers.get("content-type") || "";
-
-        if (contentType.includes("application/json")) {
-            try {
-                const errorBody = await response.json();
-                if (
-                    errorBody !== null &&
-                    typeof errorBody === "object" &&
-                    typeof errorBody.error === "string"
-                ) {
-                    message = errorBody.error;
-                }
-            } catch (error) {
-                if (!(error instanceof SyntaxError)) {
-                    throw error;
-                }
+        if ((response.headers.get("content-type") || "").includes("application/json")) {
+            const body = await response.json();
+            if (body && typeof body.error === "string") {
+                message = body.error;
             }
         }
-
         throw new Error(message);
     }
-
     return response;
 }
 
-function displayProducts(products) {
+function addCell(row, value) {
+    const cell = document.createElement("td");
+    cell.textContent = value;
+    row.appendChild(cell);
+}
+
+function fillProductSelectors() {
+    for (const select of productSelectors) {
+        const selected = select.value;
+        select.replaceChildren();
+        for (const product of products) {
+            const option = document.createElement("option");
+            option.value = product.id;
+            option.textContent = `${product.name} (${product.unit})`;
+            select.appendChild(option);
+        }
+        if (products.some(product => product.id === selected)) {
+            select.value = selected;
+        }
+    }
+}
+
+async function loadProducts() {
+    const response = await request("/api/products");
+    products = await response.json();
     productsBody.replaceChildren();
 
     for (const product of products) {
         const row = document.createElement("tr");
+        addCell(row, product.name);
+        addCell(row, product.category);
+        addCell(row, product.unit);
 
-        for (const value of [
-            product.name,
-            product.category,
-            product.unit
-        ]) {
-            const cell = document.createElement("td");
-            cell.textContent = value;
-            row.appendChild(cell);
-        }
-
+        const action = document.createElement("td");
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", async () => {
+            try {
+                await request(`/api/products/${encodeURIComponent(product.id)}`, {
+                    method: "DELETE"
+                });
+                await loadProducts();
+                await loadHistory();
+                showStatus("Product deleted.");
+            } catch (error) {
+                showStatus(`Could not delete product. ${error.message}`);
+            }
+        });
+        action.appendChild(deleteButton);
+        row.appendChild(action);
         productsBody.appendChild(row);
     }
 
     productsMessage.textContent = products.length === 0
         ? "No products recorded yet."
         : `${products.length} product(s) loaded.`;
+    fillProductSelectors();
 }
 
-async function loadProducts() {
-    productsMessage.textContent = "Loading products...";
+async function loadSellers() {
+    const response = await request("/api/sellers");
+    sellers = await response.json();
+    sellersBody.replaceChildren();
 
-    const response = await request("/api/products");
-    const products = await response.json();
-
-    if (
-        !Array.isArray(products) ||
-        !products.every(product =>
-            product !== null &&
-            typeof product === "object" &&
-            typeof product.name === "string" &&
-            typeof product.category === "string" &&
-            typeof product.unit === "string"
-        )
-    ) {
-        throw new Error("The product response has an unexpected format.");
+    for (const seller of sellers) {
+        const row = document.createElement("tr");
+        addCell(row, seller.name);
+        addCell(row, seller.location);
+        sellersBody.appendChild(row);
     }
-
-    displayProducts(products);
 }
 
-productForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const product = {
-        name: productName.value.trim(),
-        category: productCategory.value.trim(),
-        unit: productUnit.value.trim()
-    };
-
-    if (!product.name || !product.category || !product.unit) {
-        showStatus("Please complete every product field.");
+async function loadHistory() {
+    historyBody.replaceChildren();
+    const productId = document.getElementById("history-product").value;
+    if (!productId) {
+        historyMessage.textContent = "Add a product to view its history.";
         return;
     }
 
-    saveButton.disabled = true;
-    saveButton.textContent = "Saving...";
-    showStatus("Saving product...");
+    const response = await request(`/api/history/${encodeURIComponent(productId)}`);
+    const history = await response.json();
+    for (const observation of history) {
+        const row = document.createElement("tr");
+        addCell(row, observation.recordedAt);
+        addCell(row, observation.sellerName);
+        addCell(row, observation.price);
+        historyBody.appendChild(row);
+    }
+    historyMessage.textContent = history.length === 0
+        ? "No prices recorded for this product yet."
+        : `${history.length} observation(s), newest first.`;
+}
 
+document.getElementById("product-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
         await request("/api/products", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(product)
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: data.get("name"),
+                category: data.get("category"),
+                unit: data.get("unit")
+            })
         });
-    } catch (error) {
-        showStatus(
-            `Product submission failed. ${error.message} ` +
-            "Check the backend records before retrying."
-        );
-
-        saveButton.disabled = false;
-        saveButton.textContent = "Save product";
-        return;
-    }
-
-    productForm.reset();
-
-    try {
+        form.reset();
         await loadProducts();
-        showStatus("Product saved successfully.");
+        showStatus("Product saved.");
     } catch (error) {
-        showStatus(
-            `Product saved, but the list could not refresh. ${error.message}`
-        );
-        productsMessage.textContent =
-            "Reload the page to try loading products again.";
-    } finally {
-        saveButton.disabled = false;
-        saveButton.textContent = "Save product";
+        showStatus(`Could not save product. ${error.message}`);
     }
 });
 
-refreshButton.addEventListener("click", async () => {
-    refreshButton.disabled = true;
-    showStatus("Refreshing products...");
-
+document.getElementById("seller-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
     try {
-        await loadProducts();
-        showStatus("Products loaded from the backend.");
+        await request("/api/sellers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: data.get("name"),
+                location: data.get("location")
+            })
+        });
+        form.reset();
+        await loadSellers();
+        showStatus("Seller saved.");
     } catch (error) {
-        showStatus(`Could not load products. ${error.message}`);
-        productsMessage.textContent = "Products could not be loaded.";
-    } finally {
-        refreshButton.disabled = false;
+        showStatus(`Could not save seller. ${error.message}`);
+    }
+});
+
+document.getElementById("price-form").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+        await request("/api/prices", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                productId: data.get("productId"),
+                sellerId: data.get("sellerId"),
+                price: data.get("price"),
+                recordedAt: data.get("recordedAt")
+            })
+        });
+        await loadHistory();
+        showStatus("Price recorded.");
+    } catch (error) {
+        showStatus(`Could not record price. ${error.message}`);
+    }
+});
+
+document.getElementById("compare-button").addEventListener("click", async () => {
+    const productId = document.getElementById("comparison-product").value;
+    if (!productId) {
+        comparisonResult.textContent = "Add a product before comparing prices.";
+        return;
+    }
+    try {
+        const response = await request(
+            `/api/comparison/${encodeURIComponent(productId)}`);
+        const comparison = await response.json();
+        comparisonResult.textContent =
+            `Price ${comparison.direction}: ${comparison.previousPrice} → ` +
+            `${comparison.latestPrice} ZMW (difference ${comparison.difference} ZMW).`;
+    } catch (error) {
+        comparisonResult.textContent = error.message;
+    }
+});
+
+document.getElementById("history-product").addEventListener("change", async () => {
+    try {
+        await loadHistory();
+    } catch (error) {
+        historyMessage.textContent = `Could not load history. ${error.message}`;
+    }
+});
+
+document.getElementById("refresh-button").addEventListener("click", async () => {
+    try {
+        await Promise.all([loadProducts(), loadSellers()]);
+        await loadHistory();
+        showStatus("Products and sellers refreshed.");
+    } catch (error) {
+        showStatus(`Could not refresh records. ${error.message}`);
     }
 });
 
 async function initialisePage() {
     if (window.location.protocol === "file:") {
-        showStatus(
-            "This is a visual preview. Open the page through the " +
-            "Javalin server to load and save products."
-        );
-
-        productsMessage.textContent = "Backend connection required.";
+        showStatus("Open this page through the Javalin server to use the API.");
         return;
     }
 
-    saveButton.disabled = false;
-    saveButton.textContent = "Save product";
+    const date = new Date();
+    const localToday = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0")
+    ].join("-");
+    document.getElementById("price-date").value = localToday;
 
     try {
-        await loadProducts();
-        showStatus("Products loaded from the backend.");
+        await Promise.all([loadProducts(), loadSellers()]);
+        await loadHistory();
+        showStatus("MarketPulse records loaded.");
     } catch (error) {
-        showStatus(
-            `Could not load products. ${error.message} ` +
-            "Check that the backend implements GET /api/products."
-        );
-
-        productsMessage.textContent = "Products could not be loaded.";
+        showStatus(`Could not load records. ${error.message}`);
     }
 }
 
