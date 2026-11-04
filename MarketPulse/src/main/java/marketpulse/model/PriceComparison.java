@@ -1,4 +1,4 @@
-package marketplace.model;
+package marketpulse.model;
 
 /**
  * Strategy interface for comparing two price observations.
