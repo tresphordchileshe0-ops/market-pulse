@@ -1,4 +1,4 @@
-package marketplace.model;
+package marketpulse.model;
 
 import java.math.BigDecimal;
 
