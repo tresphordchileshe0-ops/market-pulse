@@ -1,3 +1,12 @@
+|FULL NAME          |STUDENT NUMBER|
+
+|Chileshe Chileshe	|2420910       |
+|Elijah Munsantu	  |2200182       |
+|Sibon’gile Tembo	  |2410291       |
+|Chama Chibesa 	    |2420997       |
+
+
+
 # MarketPulse
 
 MarketPulse helps people record everyday product prices from local sellers, review price history, and see whether a product's price has increased or decreased.
